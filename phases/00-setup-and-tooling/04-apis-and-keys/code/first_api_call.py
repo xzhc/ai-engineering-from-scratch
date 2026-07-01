@@ -2,6 +2,9 @@ import os
 import json
 import urllib.request
 
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def call_with_sdk_with_stepfun_api():
     try:
@@ -10,7 +13,7 @@ def call_with_sdk_with_stepfun_api():
         print("Install the SDK: pip install anthropic")
         return
 
-    client = anthropic.Anthropic(api_key= os.environ.get("STEP_API_KEY"), base_url="https://api.stepfun.com/step_plan")
+    client = anthropic.Anthropic(api_key= os.getenv("STEP_API_KEY"), base_url="https://api.stepfun.com/step_plan")
     response = client.messages.create(
         model="step-3.7-flash",
         max_tokens=1024,
@@ -47,7 +50,7 @@ def call_raw_http():
 
 
 def call_raw_http_with_stepfun_api():
-    api_key = os.environ.get("STEP_API_KEY")
+    api_key = os.getenv("STEP_API_KEY")
     if not api_key:
         print("Set STEP_API_KEY environment variable first")
         return
