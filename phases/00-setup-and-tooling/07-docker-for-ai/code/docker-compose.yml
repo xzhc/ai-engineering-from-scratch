@@ -1,15 +1,15 @@
 services:
-  ai-dev:
+  ai-dev-mac:
     build:
       context: .
-      dockerfile: Dockerfile
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+      dockerfile: Dockerfile.mac
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
     volumes:
       - ../../../:/workspace
       - ~/models:/models

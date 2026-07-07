@@ -1,0 +1,48 @@
+# 使用标准 Python 镜像（CPU 版本，适合所有 Mac）
+FROM python:3.12-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# 安装系统依赖
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# 升级 pip
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# 安装 PyTorch（CPU 版本）
+# 注意：移除了 CUDA 索引，PyTorch 会自动下载 CPU 版本
+RUN pip install --no-cache-dir \
+    torch==2.3.1 \
+    torchvision==0.18.1 \
+    torchaudio==2.3.1 \
+    --index-url https://download.pytorch.org/whl/cpu
+
+# 启用 Metal 后端（在代码中设置）
+ENV PYTORCH_ENABLE_MPS_FALLBACK=1
+
+# 安装 AI 库
+RUN pip install --no-cache-dir \
+    numpy \
+    pandas \
+    scikit-learn \
+    matplotlib \
+    jupyter \
+    transformers \
+    datasets \
+    accelerate \
+    safetensors \
+    flask
+
+WORKDIR /workspace
+
+VOLUME ["/workspace", "/models"]
+
+EXPOSE 8888
+
+CMD ["python"]
