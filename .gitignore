@@ -1,5 +1,5 @@
 *.pt
 *.pth
 *.safetensors
-
+.omo
 *.env

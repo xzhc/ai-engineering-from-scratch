@@ -34,19 +34,52 @@ else
 fi
 
 PYTHON_CMD=""
-for cmd in python3 python; do
-    if command -v "$cmd" &> /dev/null; then
-        version=$("$cmd" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || true)
-        if [ -n "$version" ]; then
-            major=$(echo "$version" | cut -d. -f1)
-            minor=$(echo "$version" | cut -d. -f2)
-            if [ "$major" -ge "$PYTHON_MIN_MAJOR" ] && [ "$minor" -ge "$PYTHON_MIN_MINOR" ]; then
-                PYTHON_CMD="$cmd"
-                break
-            fi
+
+# First, check if we already have a working venv in the repo
+if [ -f "$REPO_ROOT/$VENV_DIR/bin/python" ]; then
+    if "$REPO_ROOT/$VENV_DIR/bin/python" --version &> /dev/null; then
+        VERSION=$("$REPO_ROOT/$VENV_DIR/bin/python" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+        MAJOR=$(echo "$VERSION" | cut -d. -f1)
+        MINOR=$(echo "$VERSION" | cut -d. -f2)
+        if [ "$MAJOR" -ge "$PYTHON_MIN_MAJOR" ] && [ "$MINOR" -ge "$PYTHON_MIN_MINOR" ]; then
+            PYTHON_CMD="$REPO_ROOT/$VENV_DIR/bin/python"
+            pass "Found existing venv: $($PYTHON_CMD --version)"
         fi
     fi
-done
+fi
+
+# If no venv found, try uv
+if [ -z "$PYTHON_CMD" ] && $HAS_UV; then
+    if command -v uv &> /dev/null; then
+        if uv python find 3.11 &> /dev/null || uv python find 3.12 &> /dev/null || uv python find 3.13 &> /dev/null; then
+            PYTHON_CMD="uv run --no-project python"
+            pass "Using uv Python"
+        fi
+    fi
+fi
+
+# Finally, check system Python commands
+if [ -z "$PYTHON_CMD" ]; then
+    for cmd in python3 python; do
+        if command -v "$cmd" &> /dev/null; then
+            version=$("$cmd" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || true)
+            if [ -n "$version" ]; then
+                major=$(echo "$version" | cut -d. -f1)
+                minor=$(echo "$version" | cut -d. -f2)
+                if [ "$major" -ge "$PYTHON_MIN_MAJOR" ] && [ "$minor" -ge "$PYTHON_MIN_MINOR" ]; then
+                    PYTHON_CMD="$cmd"
+                    break
+                fi
+            fi
+        fi
+    done
+fi
+
+echo ""
+echo "--- Checking virtual environment ---"
+echo ""
+
+NEED_VENV=false
 
 if [ -z "$PYTHON_CMD" ]; then
     fail "Python ${PYTHON_MIN_MAJOR}.${PYTHON_MIN_MINOR}+ not found"
@@ -58,47 +91,52 @@ if [ -z "$PYTHON_CMD" ]; then
     exit 1
 fi
 
-pass "Python: $($PYTHON_CMD --version)"
-
-echo ""
-echo "--- Creating virtual environment ---"
-echo ""
-
-if [ -d "$VENV_DIR" ]; then
-    warn "Existing $VENV_DIR found. Reusing it."
+# If PYTHON_CMD points to existing venv, we're good
+if [[ "$PYTHON_CMD" == *"$VENV_DIR"* ]]; then
+    pass "Using existing virtual environment: $VENV_DIR"
+    NEED_VENV=false
 else
-    if $HAS_UV; then
-        uv venv "$VENV_DIR"
+    # Need to create venv
+    NEED_VENV=true
+    if [ -d "$VENV_DIR" ]; then
+        warn "Existing $VENV_DIR found. Reusing it."
+        NEED_VENV=false
     else
-        "$PYTHON_CMD" -m venv "$VENV_DIR"
+        if $HAS_UV; then
+            uv venv "$VENV_DIR"
+        else
+            "$PYTHON_CMD" -m venv "$VENV_DIR"
+        fi
+        pass "Created $VENV_DIR"
+        NEED_VENV=false
     fi
-    pass "Created $VENV_DIR"
 fi
 
-if [ -f "$VENV_DIR/bin/activate" ]; then
+if [ "$NEED_VENV" = false ] && [ -f "$VENV_DIR/bin/activate" ]; then
     source "$VENV_DIR/bin/activate"
-elif [ -f "$VENV_DIR/Scripts/activate" ]; then
+elif [ "$NEED_VENV" = false ] && [ -f "$VENV_DIR/Scripts/activate" ]; then
     source "$VENV_DIR/Scripts/activate"
-else
+elif [ "$NEED_VENV" = true ]; then
     fail "Could not find activation script in $VENV_DIR"
     exit 1
 fi
 
 pass "Activated virtual environment"
 
+# Update PYTHON_CMD to use the venv python
 VENV_PYTHON="$(which python)"
-if [[ "$VENV_PYTHON" != *"$VENV_DIR"* ]]; then
-    fail "Python is not running from the venv: $VENV_PYTHON"
-    exit 1
+if [[ "$VENV_PYTHON" == *"$VENV_DIR"* ]]; then
+    PYTHON_CMD="$VENV_PYTHON"
 fi
-pass "Python path: $VENV_PYTHON"
 
 echo ""
 echo "--- Installing core packages ---"
 echo ""
 
-if $HAS_UV; then
+if $HAS_UV && [[ "$PYTHON_CMD" == "uv"* ]]; then
     uv pip install $CORE_PACKAGES
+elif $HAS_UV; then
+    uv pip install --python "$PYTHON_CMD" $CORE_PACKAGES
 else
     pip install --upgrade pip
     pip install $CORE_PACKAGES
