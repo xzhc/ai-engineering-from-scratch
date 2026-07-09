@@ -1,0 +1,49 @@
+{
+    // ==================== Python 开发配置 ====================
+    // Pylance 类型检查
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.inlayHints.functionReturnTypes": true,
+    "python.analysis.inlayHints.variableTypes": false,
+
+    // Python 编辑器设置
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
+
+    // Black 代码格式化配置
+    "black-formatter.args": ["--line-length", "88"],
+
+    // Ruff 代码检查配置
+    "ruff.lint.run": "onSave",
+    "ruff.organizeImports": true,
+
+    // Python 调试配置
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": ["tests"],
+
+    // ==================== Jupyter Notebook 配置 ====================
+    "notebook.output.scrolling": true,
+    "notebook.output.textLineLimit": 500,
+    "notebook.cellToolbarLocation": "right",
+
+    // ==================== YAML 配置 ====================
+    "yaml.format.enable": true,
+    "yaml.format.singleQuote": false,
+    "yaml.format.bracketSpacing": true,
+
+    // ==================== TOML 配置 ====================
+    "evenBetterToml.formatter.realignEntries": true,
+    "evenBetterToml.formatter.alignEntries": false,
+
+    // ==================== GitLens 配置 ====================
+    // 启用 GitLens 但关闭行内 blame 以保持界面整洁
+    "gitlens.codeLens.enabled": false,
+    "gitlens.currentLine.enabled": false,
+    "gitlens.hovers.enabled": true
+}
